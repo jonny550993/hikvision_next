@@ -1,0 +1,15 @@
+# manifest.json
+xmltodict==0.13.0
+requests-toolbelt==1.0.0
+
+# tests
+pytest
+pytest-asyncio
+pytest-cov>=4.1.0
+pytest-homeassistant-custom-component>=0.13.179
+
+#
+async-timeout
+httpx
+respx
+aiohttp_cors
