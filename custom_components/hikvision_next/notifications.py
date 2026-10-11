@@ -166,10 +166,43 @@ class EventNotificationsView(HomeAssistantView):
             except IndexError:
                 alert.channel_id = alert.channel_id - 32
 
+    def _lookup_event_entity(self, alert: AlertInfo):
+        """Find a text entity for an event, if this event has one."""
+        if alert.event_id not in {"face"}:
+            return None, None
+        sensors = self.hass.data.get(DOMAIN, {}).get("event_text_sensors", {})
+        candidates = [
+            (uid, entity)
+            for uid, entity in sensors.items()
+            if getattr(entity, "camera_id", 0) == alert.channel_id
+        ]
+        if not candidates and alert.channel_id == 0:
+            candidates = list(sensors.items())
+        if not candidates:
+            return None, None
+        uid, entity = candidates[0]
+        return entity, uid
+
     def trigger_sensor(self, alert: AlertInfo) -> None:
-        """Determine entity and set binary sensor state."""
+        """Update text sensors or determine entity and set binary sensor state."""
 
         _LOGGER.debug("Alert: %s", alert)
+
+        if alert.event_id == "face":
+            entity, _lookup_uid = self._lookup_event_entity(alert)
+            if entity is not None:
+                person_name = alert.face_person_name or alert.state or alert.face_employee_no or "unknown"
+                attributes = {
+                    key: value
+                    for key, value in {
+                        "name": alert.face_person_name,
+                        "employee_no": alert.face_employee_no,
+                        "card_no": alert.face_card_no,
+                    }.items()
+                    if value is not None
+                }
+                entity.set_person(person_name, attributes)
+                return
 
         serial_no = self.device.device_info.serial_no.lower()
 
