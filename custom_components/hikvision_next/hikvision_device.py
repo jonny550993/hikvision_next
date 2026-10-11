@@ -22,6 +22,7 @@ from .const import (
     EVENTS_COORDINATOR,
     RTSP_PORT_FORCED,
     SECONDARY_COORDINATOR,
+    resolve_connection_type,
 )
 from .coordinator import BehaviorRulesCoordinator, EventsCoordinator, SecondaryCoordinator
 from .isapi import (
@@ -55,6 +56,8 @@ class HikvisionDevice(ISAPIClient):
         config = entry.data if entry else data
         self.entry = entry
         self.hass = hass
+        self.connection_type = resolve_connection_type(config)
+        self.intercom_coordinator = None
         self.nvr_device_id: str | None = None  # device registry id of the NVR, set on setup
         self.auth_token_expired = False
         self.control_alarm_server_host = config[CONF_SET_ALARM_SERVER]
