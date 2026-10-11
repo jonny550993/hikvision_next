@@ -1,5 +1,5 @@
 # manifest.json
-xmltodict==0.13.0
+xmltodict>=1.0.4
 requests-toolbelt==1.0.0
 
 # tests
