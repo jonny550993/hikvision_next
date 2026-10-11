@@ -217,3 +217,31 @@ async def test_update_face_verify_image(hass: HomeAssistant) -> None:
     assert entity._attr_extra_state_attributes["employee_no"] == "1001"
     assert entity._attr_extra_state_attributes["card_no"] == "12345678"
     assert entity._attr_extra_state_attributes["pic_data_len"] == 41157
+
+
+
+async def test_new_face_event_replaces_pending_reset(hass: HomeAssistant) -> None:
+    """An older cancelled reset must not erase a newer recognition event."""
+    import asyncio
+
+    device = MagicMock()
+    device.hass_device_info.return_value = {}
+    event_info = EventInfo(
+        id="face",
+        channel_id=0,
+        io_port_id=0,
+        unique_id="ds_k1t6qt_face",
+    )
+    entity = FacePersonSensor(device, 0, event_info)
+    entity.hass = hass
+
+    with patch("custom_components.hikvision_next.sensor.FACE_PERSON_PULSE_SECONDS", 0.05):
+        entity.set_person("First person", {"name": "First person"})
+        await asyncio.sleep(0.03)
+        entity.set_person("Second person", {"name": "Second person"})
+        await asyncio.sleep(0.03)
+        assert entity._attr_native_value == "Second person"
+        assert entity._face_reset_task is not None
+        await asyncio.sleep(0.04)
+        assert entity._attr_native_value == "unknown"
+        assert entity._face_reset_task is None
