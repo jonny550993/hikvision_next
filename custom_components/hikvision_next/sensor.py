@@ -157,6 +157,7 @@ class FacePersonSensor(SensorEntity):
 
     async def _reset_after_pulse(self) -> None:
         """Clear personal data after the short recognition pulse."""
+        task = asyncio.current_task()
         try:
             await asyncio.sleep(FACE_PERSON_PULSE_SECONDS)
             self._attr_native_value = "unknown"
@@ -166,7 +167,9 @@ class FacePersonSensor(SensorEntity):
         except asyncio.CancelledError:
             raise
         finally:
-            self._face_reset_task = None
+            # A newer recognition event may already have scheduled another reset.
+            if self._face_reset_task is task:
+                self._face_reset_task = None
 
     def _cancel_face_reset(self) -> None:
         """Cancel a pending face reset task."""
