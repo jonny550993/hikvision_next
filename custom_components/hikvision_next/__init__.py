@@ -53,7 +53,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HikvisionConfigEntry) ->
         await device.get_hardware_info()
         device_info = device.hass_device_info()
         device_registry = dr.async_get(hass)
-        device_registry.async_get_or_create(config_entry_id=entry.entry_id, **device_info)
+        nvr_device = device_registry.async_get_or_create(config_entry_id=entry.entry_id, **device_info)
+        device.nvr_device_id = nvr_device.id
     except ISAPIUnauthorizedError as ex:
         raise ConfigEntryAuthFailed from ex
     except Exception as ex:  # pylint: disable=broad-except
@@ -80,7 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HikvisionConfigEntry) ->
 
 async def async_remove_config_entry_device(hass: HomeAssistant, config_entry, device_entry) -> bool:
     """Delete device if not entities."""
-    if not device_entry.via_device_id:
+    if not getattr(device_entry, "via_device_id", None) and not getattr(device_entry, "via_device", None):
         _LOGGER.error(
             "You cannot delete the NVR device via the device delete method.  Please remove the integration instead"
         )

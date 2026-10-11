@@ -14,7 +14,16 @@ Everybody is invited and welcome to contribute to hikvision_next integration.
     "source=/path/on/your/disk/hikvision_next/custom_components/hikvision_next,
     target=${containerWorkspaceFolder}/config/custom_components/hikvision_next,
     type=bind"
-  ]
+  ],
+```
+
+exemple on Windows:
+```
+  "mounts": [
+    "source=/c/Users/john/Documents/GitHub//hikvision_next/custom_components/hikvision_next,
+    target=${containerWorkspaceFolder}/config/custom_components/hikvision_next,
+    type=bind"
+  ],
 ```
 3. Run / Start Debugging
 
@@ -22,7 +31,7 @@ NOTE: the first container build and launch Home Assistant may take longer.
 
 ## Test Environment
 
-Install python 3.12 or later and project dependencies:
+Install python 3.14 or later and project dependencies:
 ```
 pip install -r requirements.test.txt
 ```

@@ -48,6 +48,18 @@ class EventInfo:
 
 
 @dataclass
+class BehaviorRuleInfo:
+    """Holds info of a behavior rule."""
+
+    id: int
+    channel_id: int
+    name: str
+    event_type: str
+    rule_type: str
+    enabled: bool
+
+
+@dataclass
 class CameraStreamInfo:
     """Holds info of a camera stream."""
 
@@ -61,6 +73,7 @@ class CameraStreamInfo:
     height: int
     audio: bool
     use_alternate_picture_url: bool = False
+    snapshot_not_supported: bool = False
 
 
 @dataclass
