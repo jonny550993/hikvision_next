@@ -11,6 +11,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
 
 from .const import CONF_ALARM_SERVER_HOST, DOMAIN, HOLIDAY_MODE
+from .sdk.video_intercom import IntercomCallState
 
 SCAN_INTERVAL_EVENTS = timedelta(seconds=120)
 SCAN_INTERVAL_HOLIDAYS = timedelta(minutes=60)
@@ -141,3 +142,36 @@ class SecondaryCoordinator(DataUpdateCoordinator):
         except Exception as ex:  # pylint: disable=broad-except
             self.device.handle_exception(ex, f"Cannot fetch state for {CONF_ALARM_SERVER_HOST}")
         return data
+
+
+
+class IntercomStatusCoordinator(DataUpdateCoordinator):
+    """Track the connection and active call state of a video intercom."""
+
+    def __init__(self, hass: HomeAssistant, device) -> None:
+        """Initialize call state tracking."""
+        self.device = device
+        self.connected = False
+        self.call_state = IntercomCallState.IDLE
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{DOMAIN}_intercom",
+            update_interval=None,
+        )
+        self.data = {
+            "connected": self.connected,
+            "call_state": self.call_state,
+        }
+
+    async def async_set_connected(self, connected: bool) -> None:
+        """Update whether the SDK call-signal subscription is connected."""
+        self.connected = connected
+        self.data = {"connected": self.connected, "call_state": self.call_state}
+        self.async_set_updated_data(self.data)
+
+    async def async_set_call_state(self, call_state: IntercomCallState) -> None:
+        """Update the current call state and notify dependent entities."""
+        self.call_state = IntercomCallState(call_state)
+        self.data = {"connected": self.connected, "call_state": self.call_state}
+        self.async_set_updated_data(self.data)
