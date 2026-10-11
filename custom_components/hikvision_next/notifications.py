@@ -118,11 +118,15 @@ class EventNotificationsView(HomeAssistantView):
 
         data = await request.read()
 
-        content_type_header = request.headers.get(CONTENT_TYPE).strip()
+        content_type_header = request.headers.get(CONTENT_TYPE, "").strip()
+        if not content_type_header:
+            raise ValueError("Missing event Content-Type header")
 
         _LOGGER.debug("request headers: %s", request.headers)
         xml = None
-        if content_type_header in CONTENT_TYPE_XML:
+        media_type = content_type_header.split(";", 1)[0].strip().lower()
+        xml_media_types = {"application/xml", "text/xml"}
+        if media_type in xml_media_types:
             xml = data.decode("utf-8")
         else:
             # "multipart/form-data; boundary=boundary"
@@ -133,9 +137,10 @@ class EventNotificationsView(HomeAssistantView):
                     assert isinstance(key, bytes)
                     headers[key.decode("ascii")] = value.decode("ascii")
                 _LOGGER.debug("part headers: %s", headers)
-                if headers.get(CONTENT_TYPE) in CONTENT_TYPE_XML:
+                part_content_type = headers.get(CONTENT_TYPE, "").split(";", 1)[0].strip().lower()
+                if part_content_type in xml_media_types:
                     xml = part.text
-                if headers.get(CONTENT_TYPE) == CONTENT_TYPE_IMAGE:
+                if part_content_type == CONTENT_TYPE_IMAGE:
                     _LOGGER.debug("image found")
                     # Use camera.snapshot service instead
                     # from datetime import datetime
