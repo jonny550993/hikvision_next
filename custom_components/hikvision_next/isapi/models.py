@@ -23,6 +23,10 @@ class AlertInfo:
     mac: str = ""
     region_id: int = 0
     detection_target: str = field(default=None)
+    state: str | None = None
+    face_person_name: str | None = None
+    face_employee_no: str | None = None
+    face_card_no: str | None = None
 
 
 @dataclass
