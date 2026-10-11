@@ -176,7 +176,7 @@ class EventNotificationsView(HomeAssistantView):
             for uid, entity in sensors.items()
             if getattr(entity, "camera_id", 0) == alert.channel_id
         ]
-        if not candidates and alert.channel_id == 0:
+        if not candidates and (alert.channel_id == 0 or len(sensors) == 1):
             candidates = list(sensors.items())
         if not candidates:
             return None, None
@@ -221,6 +221,42 @@ class EventNotificationsView(HomeAssistantView):
                 self.fire_hass_event(alert)
             return
         raise ValueError(f"Entity not found {entity_id}")
+
+    async def update_face_verify_image(
+        self,
+        device: HikvisionDevice,
+        image: bytes,
+        *,
+        person_name: str | None = None,
+        employee_no: str | None = None,
+        card_no: str | None = None,
+        pic_len: int | None = None,
+    ) -> None:
+        """Send an inline SDK face snapshot to the image entity."""
+        images = self.hass.data.get(DOMAIN, {}).get("face_verify_images", {})
+        if not images:
+            return
+        serial = slugify(f"{device.device_info.serial_no.lower()}_face_verify")
+        entity = images.get(serial)
+        if entity is None:
+            entity = next(
+                (
+                    item for item in images.values()
+                    if getattr(getattr(item, "device", None), "device_info", None)
+                    and item.device.device_info.serial_no == device.device_info.serial_no
+                ),
+                None,
+            )
+        if entity is None:
+            _LOGGER.debug("No face verification image entity registered for %s", device.device_info.serial_no)
+            return
+        entity.set_image(
+            image,
+            person_name=person_name,
+            employee_no=employee_no,
+            card_no=card_no,
+            pic_len=pic_len,
+        )
 
     def fire_hass_event(self, alert: AlertInfo):
         """Fire HASS event."""

@@ -44,6 +44,7 @@ from .models import (
     StorageInfo,
 )
 from .utils import bool_to_str, deep_get, parse_isapi_response, str_to_bool
+from ..sdk.acsalarminfo import ACS_FACE_VERIFY_PASS_MINORS
 
 Node = dict[str, Any]
 
@@ -769,13 +770,41 @@ class ISAPIClient:
         await self.request(PUT, "System/reboot", present="xml")
 
     @staticmethod
-    def parse_event_notification(xml: str) -> AlertInfo:
-        """Parse incoming EventNotificationAlert XML message."""
+    def parse_event_notification(xml: str | dict[str, Any]) -> AlertInfo:
+        """Parse ISAPI notifications and access-controller events."""
 
-        # Fix for some cameras sending non html encoded data
-        xml = xml.replace("&", "&amp;")
+        if isinstance(xml, dict):
+            data = xml
+        else:
+            # Fix for some cameras sending non html encoded data
+            xml = xml.replace("&", "&amp;")
+            data = xmltodict.parse(xml)
 
-        data = xmltodict.parse(xml)
+        # Access-control face verification is delivered in a different payload
+        # from EventNotificationAlert and can include a person name and card ID.
+        access_event = data.get("AccessControllerEvent")
+        if access_event is not None:
+            try:
+                major = int(access_event.get("majorEventType", 0))
+                minor = int(access_event.get("subEventType", -1))
+            except (TypeError, ValueError):
+                major, minor = 0, -1
+            if major == 5 and minor in ACS_FACE_VERIFY_PASS_MINORS:
+                name = access_event.get("name") or None
+                employee_no = access_event.get("employeeNoString") or None
+                card_no = access_event.get("cardNo") or None
+                state = name or employee_no or card_no
+                return AlertInfo(
+                    channel_id=int(access_event.get("channelID", 0) or 0),
+                    io_port_id=int(access_event.get("doorNo", 0) or 0),
+                    event_id="face",
+                    state=state,
+                    face_person_name=name,
+                    face_employee_no=employee_no,
+                    face_card_no=card_no,
+                )
+            raise ValueError("Unsupported access-controller event")
+
         alert = data["EventNotificationAlert"]
 
         event_id = alert.get("eventType")

@@ -23,6 +23,10 @@ class AlertInfo:
     mac: str = ""
     region_id: int = 0
     detection_target: str = field(default=None)
+    state: str | None = None
+    face_person_name: str | None = None
+    face_employee_no: str | None = None
+    face_card_no: str | None = None
 
 
 @dataclass
@@ -116,6 +120,7 @@ class CapabilitiesInfo:
     support_alarm_server: bool = False
     support_channel_zero: bool = False
     support_event_mutex_checking: bool = False
+    support_video_intercom: bool = False
     input_ports: int = 0
     output_ports: int = 0
 
