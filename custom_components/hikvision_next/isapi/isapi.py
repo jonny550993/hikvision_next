@@ -780,9 +780,12 @@ class ISAPIClient:
             xml = xml.replace("&", "&amp;")
             data = xmltodict.parse(xml)
 
-        # Access-control face verification is delivered in a different payload
-        # from EventNotificationAlert and can include a person name and card ID.
+        # Access-control payloads are sent both as a standalone dictionary and
+        # nested inside EventNotificationAlert XML by different firmware versions.
+        alert = data.get("EventNotificationAlert")
         access_event = data.get("AccessControllerEvent")
+        if access_event is None and isinstance(alert, dict):
+            access_event = alert.get("AccessControllerEvent")
         if access_event is not None:
             try:
                 major = int(access_event.get("majorEventType", 0))

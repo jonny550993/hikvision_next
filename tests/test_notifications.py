@@ -234,3 +234,46 @@ async def test_nvr_and_cam_notification_alert(
     assert sensor_cam_2.state == STATE_OFF
     assert sensor_cam_3.state == STATE_ON
     assert sensor_nvr_1.state == STATE_ON
+
+
+
+@pytest.mark.parametrize(
+    "content_type",
+    [
+        "application/xml",
+        "application/xml; charset=utf-8",
+        'application/xml; charset="UTF-8"',
+        "text/xml; charset=UTF-8",
+    ],
+)
+async def test_parse_event_request_accepts_xml_content_type_parameters(
+    hass: HomeAssistant, content_type: str
+) -> None:
+    """Accept XML media types with normal charset parameters."""
+    view = EventNotificationsView(hass)
+    request = MagicMock()
+    request.headers = {"Content-Type": content_type}
+
+    async def read_payload() -> bytes:
+        return b"<EventNotificationAlert/>"
+
+    request.read = read_payload
+
+    assert await view.parse_event_request(request) == "<EventNotificationAlert/>"
+
+
+async def test_parse_event_request_rejects_missing_content_type(
+    hass: HomeAssistant,
+) -> None:
+    """Report missing content type clearly instead of failing on None.strip()."""
+    view = EventNotificationsView(hass)
+    request = MagicMock()
+    request.headers = {}
+
+    async def read_payload() -> bytes:
+        return b"<EventNotificationAlert/>"
+
+    request.read = read_payload
+
+    with pytest.raises(ValueError, match="Missing event Content-Type"):
+        await view.parse_event_request(request)
