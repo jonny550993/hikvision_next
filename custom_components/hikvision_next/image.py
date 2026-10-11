@@ -101,7 +101,7 @@ class FaceVerifyImage(ImageEntity):
 
     def __init__(self, hass: HomeAssistant, device: HikvisionDevice) -> None:
         """Initialize image entity."""
-        self.hass = hass
+        ImageEntity.__init__(self, hass)
         self.device = device
         self._image: bytes | None = None
         self._attr_unique_id = slugify(
