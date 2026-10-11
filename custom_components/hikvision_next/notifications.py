@@ -123,16 +123,16 @@ class EventNotificationsView(HomeAssistantView):
         xml_media_types = {"application/xml", "text/xml"}
         if media_type in xml_media_types:
             xml = data.decode("utf-8")
-        else:
+        elif media_type == "multipart/form-data":
             # "multipart/form-data; boundary=boundary"
             decoder = MultipartDecoder(data, content_type_header)
             for part in decoder.parts:
                 headers = {}
                 for key, value in part.headers.items():
                     assert isinstance(key, bytes)
-                    headers[key.decode("ascii")] = value.decode("ascii")
+                    headers[key.decode("ascii").lower()] = value.decode("ascii")
                 _LOGGER.debug("part headers: %s", headers)
-                part_content_type = headers.get(CONTENT_TYPE, "").split(";", 1)[0].strip().lower()
+                part_content_type = headers.get(CONTENT_TYPE.lower(), "").split(";", 1)[0].strip().lower()
                 if part_content_type in xml_media_types:
                     xml = part.text
                 if part_content_type == CONTENT_TYPE_IMAGE:
@@ -146,6 +146,9 @@ class EventNotificationsView(HomeAssistantView):
                     #     await image_file.write(part.content)
                     #     await image_file.flush()
 
+        elif media_type not in xml_media_types:
+            raise ValueError(f"Unsupported event Content-Type {content_type_header}")
+        
         if not xml:
             raise ValueError(f"Unexpected event Content-Type {content_type_header}")
         return xml

@@ -277,3 +277,45 @@ async def test_parse_event_request_rejects_missing_content_type(
 
     with pytest.raises(ValueError, match="Missing event Content-Type"):
         await view.parse_event_request(request)
+
+
+
+async def test_parse_event_request_rejects_unsupported_media_type(
+    hass: HomeAssistant,
+) -> None:
+    """Reject non-XML, non-multipart callback bodies with a clear error."""
+    view = EventNotificationsView(hass)
+    request = MagicMock()
+    request.headers = {"Content-Type": "application/json"}
+
+    async def read_payload() -> bytes:
+        return b'{"event": "test"}'
+
+    request.read = read_payload
+
+    with pytest.raises(ValueError, match="Unsupported event Content-Type"):
+        await view.parse_event_request(request)
+
+
+
+async def test_parse_event_request_accepts_lowercase_multipart_part_headers(
+    hass: HomeAssistant,
+) -> None:
+    """Match multipart part headers without depending on header-name casing."""
+    view = EventNotificationsView(hass)
+    request = MagicMock()
+    request.headers = {"Content-Type": "multipart/form-data; boundary=boundary"}
+    payload = (
+        b"--boundary\r\n"
+        b"content-type: application/xml; charset=UTF-8\r\n"
+        b"\r\n"
+        b"<EventNotificationAlert/>\r\n"
+        b"--boundary--\r\n"
+    )
+
+    async def read_payload() -> bytes:
+        return payload
+
+    request.read = read_payload
+
+    assert await view.parse_event_request(request) == "<EventNotificationAlert/>"
