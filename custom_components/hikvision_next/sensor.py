@@ -34,13 +34,14 @@ async def async_setup_entry(
     coordinator = device.coordinators.get(SECONDARY_COORDINATOR)
 
     entities = []
-    for camera in device.cameras:
-        for event in camera.events_info:
-            if event.id == "face":
-                entities.append(FacePersonSensor(device, camera.id, event))
-    for event in device.events_info:
-        if event.id == "face":
-            entities.append(FacePersonSensor(device, 0, event))
+    # Access-controller face events are not part of Event/triggers capability discovery.
+    face_event = EventInfo(
+        id="face",
+        channel_id=0,
+        io_port_id=0,
+        unique_id=f"{slugify(device.device_info.serial_no.lower())}_face_person",
+    )
+    entities.append(FacePersonSensor(device, 0, face_event))
     if coordinator:
         for key in NOTIFICATION_HOST_KEYS:
             entities.append(AlarmServerSensor(coordinator, key))
