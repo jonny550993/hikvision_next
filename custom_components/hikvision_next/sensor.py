@@ -148,7 +148,8 @@ class FacePersonSensor(SensorEntity):
         self._cancel_face_reset()
         self._attr_native_value = person_name or "unknown"
         self._attr_extra_state_attributes = dict(attributes)
-        self.async_write_ha_state()
+        if self.hass and self.entity_id:
+            self.async_write_ha_state()
         if self.hass:
             self._face_reset_task = self.hass.async_create_task(self._reset_after_pulse())
 
@@ -158,7 +159,8 @@ class FacePersonSensor(SensorEntity):
             await asyncio.sleep(FACE_PERSON_PULSE_SECONDS)
             self._attr_native_value = "unknown"
             self._attr_extra_state_attributes = {}
-            self.async_write_ha_state()
+            if self.hass and self.entity_id:
+                self.async_write_ha_state()
         except asyncio.CancelledError:
             raise
         finally:
