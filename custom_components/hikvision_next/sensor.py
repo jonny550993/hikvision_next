@@ -48,6 +48,7 @@ async def async_setup_entry(
         for item in list(device.storage):
             entities.append(StorageSensor(coordinator, item))
 
+    if entities:
         async_add_entities(entities, True)
 
 
