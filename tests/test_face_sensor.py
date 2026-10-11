@@ -245,3 +245,29 @@ async def test_new_face_event_replaces_pending_reset(hass: HomeAssistant) -> Non
         await asyncio.sleep(0.04)
         assert entity._attr_native_value == "unknown"
         assert entity._face_reset_task is None
+
+
+
+def test_parse_nested_event_notification_alert_with_face_event():
+    """Some firmware nests access-control data in EventNotificationAlert XML."""
+    alert = ISAPIClient.parse_event_notification(
+        {
+            "EventNotificationAlert": {
+                "eventType": "AccessControllerEvent",
+                "AccessControllerEvent": {
+                    "majorEventType": "5",
+                    "subEventType": str(0x4B),
+                    "channelID": "1",
+                    "doorNo": "2",
+                    "name": "Zhang San",
+                    "employeeNoString": "1001",
+                },
+            }
+        }
+    )
+
+    assert alert.event_id == "face"
+    assert alert.channel_id == 1
+    assert alert.io_port_id == 2
+    assert alert.state == "Zhang San"
+    assert alert.face_employee_no == "1001"
