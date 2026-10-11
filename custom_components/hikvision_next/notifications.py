@@ -25,11 +25,6 @@ from .isapi.const import EVENT_IO
 _LOGGER = logging.getLogger(__name__)
 
 CONTENT_TYPE = "Content-Type"
-CONTENT_TYPE_XML = (
-    "application/xml",
-    'application/xml; charset="UTF-8"',
-    "text/xml",
-)
 CONTENT_TYPE_TEXT_HTML = "text/html"
 CONTENT_TYPE_IMAGE = "image/jpeg"
 
