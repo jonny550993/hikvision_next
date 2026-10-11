@@ -176,7 +176,7 @@ class EventNotificationsView(HomeAssistantView):
             for uid, entity in sensors.items()
             if getattr(entity, "camera_id", 0) == alert.channel_id
         ]
-        if not candidates and alert.channel_id == 0:
+        if not candidates and (alert.channel_id == 0 or len(sensors) == 1):
             candidates = list(sensors.items())
         if not candidates:
             return None, None
