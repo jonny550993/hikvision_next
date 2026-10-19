@@ -48,6 +48,8 @@ class EventBinarySensor(BinarySensorEntity):
     ) -> None:
         """Initialize."""
         self._attr_unique_id = ENTITY_ID_FORMAT.format(slugify(f"{event.unique_id}"))
+        if event.id == "anpr":
+            self.entity_id = ENTITY_ID_FORMAT.format(slugify(event.unique_id))
         self._attr_translation_key = event.id
         if event.id == EVENT_IO:
             self._attr_translation_placeholders = {"io_port_id": event.io_port_id}
