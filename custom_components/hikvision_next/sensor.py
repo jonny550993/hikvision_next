@@ -126,6 +126,7 @@ class FacePersonSensor(SensorEntity):
         self.camera_id = camera_id
         self.event = event
         self._attr_unique_id = event.unique_id
+        self.entity_id = ENTITY_ID_FORMAT.format(slugify(self.unique_id))
         self._attr_device_info = device.hass_device_info(camera_id)
         self._attr_name = "Recognized person"
         self._attr_extra_state_attributes = {}
