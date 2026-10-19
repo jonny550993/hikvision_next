@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EventNotificationAlert version="2.0" xmlns="http://www.hikvision.com/ver20/XMLSchema">
+  <ipAddress>1.0.0.255</ipAddress>
+  <portNo>8123</portNo>
+  <protocol>HTTP</protocol>
+  <macAddress>a6:63:9e:f8:01:09</macAddress>
+  <channelID>1</channelID>
+  <dateTime>2024-11-19T16:53:28+01:00</dateTime>
+  <activePostCount>1</activePostCount>
+  <eventType>ANPR</eventType>
+  <eventState>active</eventState>
+  <channelName>ANPR camera</channelName>
+  <ANPR>
+    <licensePlate>KH35192</licensePlate>
+    <direction>forward</direction>
+    <confidenceLevel>100</confidenceLevel>
+  </ANPR>
+</EventNotificationAlert>
