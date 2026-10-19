@@ -226,7 +226,7 @@ class EventNotificationsView(HomeAssistantView):
 
         device_id_param = f"_{alert.channel_id}" if alert.channel_id != 0 and alert.event_id != EVENT_IO else ""
         io_port_id_param = f"_{alert.io_port_id}" if alert.io_port_id != 0 else ""
-        unique_id = f"{slugify(serial_no)}{device_id_param}{io_port_id_param}_{alert.event_id}"
+        unique_id = f"binary_sensor.{slugify(serial_no)}{device_id_param}{io_port_id_param}_{alert.event_id}"
 
         _LOGGER.debug("UNIQUE_ID: %s", unique_id)
 
