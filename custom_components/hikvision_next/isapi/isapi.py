@@ -427,7 +427,7 @@ class ISAPIClient:
         self, camera: IPCamera, proxy_protocol: str
     ) -> list[IPCamera]:
         """Discover extra sensor channels exposed directly by a proxied thermal camera."""
-        if not camera.model.upper().startswith(("DS-2TD", "IDS-2TD", "HM-TD")) or not camera.ip_addr:
+        if not (camera.model or "").upper().startswith(("DS-2TD", "IDS-2TD", "HM-TD")) or not camera.ip_addr:
             return []
 
         source_host = f"http://{camera.ip_addr}"
