@@ -27,12 +27,13 @@ class FakeCapabilities:
 
 
 class FakeHikvisionDevice:
-    device_info = FakeDeviceInfo()
-    capabilities = FakeCapabilities()
-    supported_events = [
-        EventInfo(id="anpr", channel_id=0, io_port_id=0, notifications=["center"]),
-        EventInfo(id="io", channel_id=0, io_port_id=1, notifications=["center"]),
-    ]
+    def __init__(self):
+        self.device_info = FakeDeviceInfo()
+        self.capabilities = FakeCapabilities()
+        self.supported_events = [
+            EventInfo(id="anpr", channel_id=0, io_port_id=0, notifications=["center"]),
+            EventInfo(id="io", channel_id=0, io_port_id=1, notifications=["center"]),
+        ]
 
     def _event_matches_capabilities_scope(self, event: EventInfo, camera_id: int | None) -> bool:
         from custom_components.hikvision_next.const import EVENTS
