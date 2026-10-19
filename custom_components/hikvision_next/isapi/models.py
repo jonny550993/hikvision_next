@@ -78,6 +78,9 @@ class CameraStreamInfo:
     audio: bool
     use_alternate_picture_url: bool = False
     snapshot_not_supported: bool = False
+    source_host: str = ""
+    source_rtsp_port: int = 0
+    unique_id: str | None = None
 
 
 @dataclass
