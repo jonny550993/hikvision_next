@@ -17,6 +17,7 @@ from .const import (
     BEHAVIOR_RULES_COORDINATOR,
     CONF_ALARM_SERVER_HOST,
     CONF_SET_ALARM_SERVER,
+    DEVICE_LEVEL_EVENT_IDS,
     DOMAIN,
     EVENTS,
     EVENTS_COORDINATOR,
@@ -140,28 +141,41 @@ class HikvisionDevice(ISAPIClient):
         self,
         camera_id: int | None = None,
     ) -> list[EventInfo]:
-        """Get events info handled by integration (camera id:  NVR = None, camera > 0)."""
-        events = []
+        """Return integration-supported events scoped to the recorder or camera."""
+        events: list[EventInfo] = []
 
-        if camera_id is None:  # NVR
-            integration_supported_events = [
-                s for s in self.supported_events if (s.id in EVENTS and EVENTS[s.id].get("type") == EVENT_IO)
+        if camera_id is None:
+            supported = [
+                event
+                for event in self.supported_events
+                if event.id in EVENTS
+                and (
+                    EVENTS[event.id].get("type") == EVENT_IO
+                    or event.id in DEVICE_LEVEL_EVENT_IDS
+                )
+                and not (self.device_info.is_nvr and event.id == "anpr" and event.channel_id == 0)
             ]
-        else:  # Camera
-            integration_supported_events = [
-                s for s in self.supported_events if (s.channel_id == int(camera_id) and s.id in EVENTS)
+        else:
+            supported = [
+                event
+                for event in self.supported_events
+                if event.id in EVENTS and event.channel_id == int(camera_id)
             ]
 
-        for event in integration_supported_events:
-            # Build unique_id
+        for event in supported:
             device_id_param = f"_{camera_id}" if camera_id else ""
             io_port_id_param = f"_{event.io_port_id}" if event.io_port_id != 0 else ""
-            unique_id = f"{slugify(self.device_info.serial_no.lower())}{device_id_param}{io_port_id_param}_{event.id}"
-
-            if EVENTS.get(event.id):
-                event.unique_id = unique_id
-                event.disabled = "center" not in event.notifications  # Disable if not set Notify Surveillance Center
-                events.append(event)
+            serial = slugify(self.device_info.serial_no.lower())
+            event.unique_id = f"{serial}{device_id_param}{io_port_id_param}_{event.id}"
+            event.disabled = "center" not in event.notifications
+            if event.id == "anpr":
+                event.anpr_plate_unique_id = (
+                    f"{serial}{device_id_param}{io_port_id_param}_anpr_plate"
+                )
+                event.anpr_image_unique_id = (
+                    f"{serial}{device_id_param}{io_port_id_param}_anpr_snap"
+                )
+            events.append(event)
         return events
 
     def handle_exception(self, ex: Exception, details: str = ""):
