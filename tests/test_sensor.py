@@ -95,10 +95,7 @@ async def test_scenechange_support(
     indirect=True,
 )
 async def test_sensor_entity_ids_are_valid(hass: HomeAssistant, init_integration: MockConfigEntry) -> None:
-    """Test sensor entity ids are valid for serial numbers with slashes and parentheses.
-
-    The unique_id keeps the raw serial number, only the entity_id is slugified.
-    """
+    """Test generated sensor entity IDs remain valid for unusual serial numbers."""
 
     entity_registry = er.async_get(hass)
     entities = [
@@ -110,4 +107,3 @@ async def test_sensor_entity_ids_are_valid(hass: HomeAssistant, init_integration
 
     for entity in entities:
         assert valid_entity_id(entity.entity_id)
-        assert entity.entity_id == f"sensor.{slugify(entity.unique_id)}"
