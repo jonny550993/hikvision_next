@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -59,7 +59,7 @@ class EventSwitch(CoordinatorEntity, SwitchEntity):
     def __init__(self, device_id: int, event: EventInfo, coordinator) -> None:
         """Initialize."""
         super().__init__(coordinator)
-        self._attr_unique_id = ENTITY_ID_FORMAT.format(slugify(f"{event.unique_id}"))
+        self._attr_unique_id = slugify(event.unique_id)
 
         self._attr_device_info = coordinator.device.hass_device_info(device_id)
         self._attr_translation_key = event.id
