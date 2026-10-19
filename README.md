@@ -1,7 +1,7 @@
 # Hikvision Next
 
 [![Downloads](https://img.shields.io/github/downloads/jonny550993/hikvision_next/total?label=downloads)](https://github.com/jonny550993/hikvision_next/releases)
-[![Version](https://img.shields.io/github/v/release/jonny550993/hikvision_next?display_name=tag&sort=semver)](https://github.com/jonny550993/hikvision_next/releases/latest) [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
+[![Version](https://img.shields.io/github/v/release/jonny550993/hikvision_next?display_name=tag&sort=semver)](https://github.com/jonny550993/hikvision_next/releases/latest) [![HACS Compatible](https://img.shields.io/badge/HACS-Compatible-41BDF5.svg)](https://hacs.xyz/)
 
 The Home Assistant integration for Hikvision NVRs and IP cameras. Receives and switches detection of alarm events. Provides video streams.
 
