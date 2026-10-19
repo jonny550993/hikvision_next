@@ -14,17 +14,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out current ref to read manifest
         uses: actions/checkout@v4
-      - name: Build integration ZIP
-        run: |
-          cd custom_components/hikvision_next
-          zip -r "$GITHUB_WORKSPACE/hikvision_next.zip" .
-          cd "$GITHUB_WORKSPACE"
-          sha256sum hikvision_next.zip > hikvision_next.zip.sha256
-      - name: Create versioned release if needed, then upload ZIP
-        env:
-          GH_TOKEN: ${{ github.token }}
+
+      - name: Determine release tag
+        id: release
+        shell: bash
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
@@ -32,9 +27,32 @@ jobs:
             VERSION="$(python -c 'import json; print(json.load(open("custom_components/hikvision_next/manifest.json"))["version"])')"
             TAG="v$VERSION"
           fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+      - name: Create versioned release if needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.release.outputs.tag }}"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "$TAG" --generate-notes
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
           fi
 
-          gh release upload "$TAG" hikvision_next.zip hikvision_next.zip.sha256 --clobber
+      - name: Check out the release tag before packaging
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Build integration ZIP
+        run: |
+          cd custom_components/hikvision_next
+          zip -r "$GITHUB_WORKSPACE/hikvision_next.zip" .
+          cd "$GITHUB_WORKSPACE"
+          sha256sum hikvision_next.zip > hikvision_next.zip.sha256
+
+      - name: Upload ZIP and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.release.outputs.tag }}" hikvision_next.zip hikvision_next.zip.sha256 --clobber
