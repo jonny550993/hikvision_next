@@ -37,6 +37,16 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     yield
 
 
+@pytest.fixture(autouse=True)
+def mock_rtsp_port_probe(monkeypatch):
+    """Avoid opening real TCP sockets when probing RTSP ports in unit tests."""
+
+    async def rtsp_port_is_open(self, port: int) -> bool:
+        return True
+
+    monkeypatch.setattr(ISAPIClient, "_is_rtsp_port_open", rtsp_port_is_open)
+
+
 @pytest.fixture
 def mock_config_entry(request) -> MockConfigEntry:
     """Return the default mocked config entry."""
