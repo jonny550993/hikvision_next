@@ -27,6 +27,8 @@ class AlertInfo:
     face_person_name: str | None = None
     face_employee_no: str | None = None
     face_card_no: str | None = None
+    anpr_license_plate: str | None = None
+    anpr_confidence_level: int | None = None
 
 
 @dataclass
