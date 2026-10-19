@@ -808,6 +808,24 @@ class ISAPIClient:
                 )
             raise ValueError("Unsupported access-controller event")
 
+        alert = data.get("EventNotificationAlert", data)
+        event_type = str(alert.get("eventType", "")).lower()
+        anpr_data = alert.get("ANPR")
+        if event_type in {"anpr", "vehicledetection"} or isinstance(anpr_data, dict):
+            try:
+                confidence = int(anpr_data.get("confidenceLevel")) if anpr_data and anpr_data.get("confidenceLevel") is not None else None
+            except (TypeError, ValueError):
+                confidence = None
+            return AlertInfo(
+                channel_id=int(alert.get("channelID", alert.get("dynChannelID", 0)) or 0),
+                io_port_id=int(alert.get("inputIOPortID", 0) or 0),
+                event_id="anpr",
+                anpr_license_plate=(anpr_data or {}).get("licensePlate") or None,
+                anpr_confidence_level=confidence,
+            )
+
+        if "EventNotificationAlert" not in data:
+            raise ValueError("Unsupported event notification payload")
         alert = data["EventNotificationAlert"]
 
         event_id = alert.get("eventType")
