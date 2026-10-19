@@ -2,7 +2,6 @@
 
 import pytest
 from homeassistant.core import HomeAssistant, valid_entity_id
-from homeassistant.util import slugify
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 import homeassistant.helpers.entity_registry as er
 
