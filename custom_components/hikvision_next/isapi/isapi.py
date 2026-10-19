@@ -905,6 +905,19 @@ class ISAPIClient:
         url = f"{source_ip}:{source_port}/ISAPI/Streaming/channels/{stream.id}"
         return f"rtsp://{u}:{p}@{url}"
 
+    async def remote_control_door(self, event: EventInfo, action) -> None:
+        """Control an access-control door through ISAPI."""
+        from ..door_control import ISAPI_REMOTE_CONTROL_DOOR_CMD
+
+        command = ISAPI_REMOTE_CONTROL_DOOR_CMD[action]
+        payload = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<RemoteControlDoor version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">'
+            f"<cmd>{command}</cmd>"
+            "</RemoteControlDoor>"
+        )
+        await self.request(PUT, event.url or "AccessControl/RemoteControl/door/1", data=payload)
+
     async def _detect_auth_method(self):
         """Establish the connection with device."""
         if not self._session:
