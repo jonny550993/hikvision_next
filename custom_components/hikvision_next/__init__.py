@@ -106,6 +106,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: HikvisionConfigEntry) -
         with suppress(Exception):
             await device.set_alarm_server("http://0.0.0.0:80", "/")
 
+    if unload_ok and not any(
+        other_entry.entry_id != entry.entry_id
+        for other_entry in hass.config_entries.async_entries(DOMAIN)
+    ):
+        hass.data.pop(DOMAIN, None)
+
     return unload_ok
 
 
