@@ -12,7 +12,7 @@ from aiohttp import web
 from requests_toolbelt.multipart import MultipartDecoder
 
 from homeassistant.components.http import HomeAssistantView
-from homeassistant.const import CONTENT_TYPE_TEXT_PLAIN, STATE_ON, Platform
+from homeassistant.const import CONTENT_TYPE_TEXT_PLAIN, STATE_OFF, STATE_ON, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get
 from homeassistant.util import slugify
@@ -169,6 +169,13 @@ class EventNotificationsView(HomeAssistantView):
             except IndexError:
                 alert.channel_id = alert.channel_id - 32
 
+    def _event_platform_unique_id(self, alert: AlertInfo) -> str:
+        """Build the entity ID used by non-binary event platforms."""
+        serial_no = slugify(self.device.device_info.serial_no.lower())
+        device_id_param = f"_{alert.channel_id}" if alert.channel_id else ""
+        io_port_id_param = f"_{alert.io_port_id}" if alert.io_port_id else ""
+        return f"{alert.event_id}.{serial_no}{device_id_param}{io_port_id_param}_{alert.event_id}"
+
     def _lookup_event_entity(self, alert: AlertInfo):
         """Find a text entity for an event, if this event has one."""
         if alert.event_id not in {"face"}:
@@ -190,6 +197,14 @@ class EventNotificationsView(HomeAssistantView):
         """Update text sensors or determine entity and set binary sensor state."""
 
         _LOGGER.debug("Alert: %s", alert)
+
+        if alert.event_id == "lock":
+            unique_id = self._event_platform_unique_id(alert).removeprefix("lock.")
+            groups = self.hass.data.get(DOMAIN, {}).get("event_lock_groups", {})
+            locked = alert.state != STATE_ON
+            for entity in groups.get(unique_id, []):
+                entity.set_locked(locked)
+            return
 
         if alert.event_id == "face":
             entity, _lookup_uid = self._lookup_event_entity(alert)
