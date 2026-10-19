@@ -825,6 +825,7 @@ class ISAPIClient:
                 event_id="anpr",
                 anpr_license_plate=(anpr_data or {}).get("licensePlate") or None,
                 anpr_confidence_level=confidence,
+                anpr_direction=(anpr_data or {}).get("direction") or None,
             )
 
         if "EventNotificationAlert" not in data:
