@@ -353,7 +353,7 @@ class ISAPIClient:
                     events.append(event)
 
         # multichannel camera needs to fetch events for each channel
-        if self.capabilities.is_multi_channel:
+        if self.capabilities.is_multi_channel or not events:
             channels_capabilities = await self.request(GET, "Event/channels/capabilities")
             channel_events = deep_get(channels_capabilities, "ChannelEventCapList.ChannelEventCap", [])
             for event_cap in channel_events:
