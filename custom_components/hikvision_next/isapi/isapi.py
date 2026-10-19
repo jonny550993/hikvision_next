@@ -399,6 +399,8 @@ class ISAPIClient:
         elif event_type == EVENT_PIR:
             # ISAPI/WLAlarm/PIR
             url = slug
+        elif event_type == EVENT_TRAFFIC:
+            url = f"Traffic/channels/{channel_id}/{slug}"
         else:
             url = f"Smart/{slug}/{channel_id}"
         return url
