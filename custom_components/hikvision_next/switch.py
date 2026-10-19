@@ -60,6 +60,8 @@ class EventSwitch(CoordinatorEntity, SwitchEntity):
         """Initialize."""
         super().__init__(coordinator)
         self._attr_unique_id = ENTITY_ID_FORMAT.format(slugify(f"{event.unique_id}"))
+        if event.id == "anpr":
+            self.entity_id = ENTITY_ID_FORMAT.format(slugify(event.unique_id))
 
         self._attr_device_info = coordinator.device.hass_device_info(device_id)
         self._attr_translation_key = event.id
