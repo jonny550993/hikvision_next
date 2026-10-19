@@ -7,6 +7,10 @@ on:
     types: [published]
   workflow_dispatch:
 
+concurrency:
+  group: release-assets-${{ github.repository }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -30,12 +34,16 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Create versioned release if needed
+        id: create_release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ steps.release.outputs.tag }}"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
             gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+            echo "created=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check out the release tag before packaging
@@ -52,6 +60,7 @@ jobs:
           sha256sum hikvision_next.zip > hikvision_next.zip.sha256
 
       - name: Upload ZIP and checksum
+        if: github.event_name != 'push' || steps.create_release.outputs.created == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
