@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EventNotificationAlert version="2.0" xmlns="http://www.hikvision.com/ver20/XMLSchema">
+  <channelID>2</channelID>
+  <dateTime>2023-01-13T19:16:39+01:00</dateTime>
+  <activePostCount>1</activePostCount>
+  <eventType>fielddetection</eventType>
+  <eventState>active</eventState>
+  <channelName>home</channelName>
+  <Extensions>
+    <serialNumber xmlns="urn:selfextension:psiaext-ver10-xsd">DS-7608NXI-I0/0P/S0000000000CCRRJ00000000WCVU</serialNumber>
+  </Extensions>
+</EventNotificationAlert>
