@@ -107,6 +107,10 @@ class HikvisionDevice(ISAPIClient):
         for coordinator in self.coordinators.values():
             await coordinator.async_config_entry_first_refresh()
 
+    def hass_camera_device_info(self, camera: IPCamera) -> DeviceInfo:
+        """Return Home Assistant device information for a camera entity."""
+        return self.hass_device_info(camera.id)
+
     def hass_device_info(self, camera_id: int = 0) -> DeviceInfo:
         """Return Home Assistant entity device information."""
         if camera_id == 0:
