@@ -356,6 +356,8 @@ class ISAPIClient:
         if self.capabilities.is_multi_channel or not events:
             channels_capabilities = await self.request(GET, "Event/channels/capabilities")
             channel_events = deep_get(channels_capabilities, "ChannelEventCapList.ChannelEventCap", [])
+            if isinstance(channel_events, dict):
+                channel_events = [channel_events]
             for event_cap in channel_events:
                 event_types = deep_get(event_cap, "eventType").get("@opt", "").split(",")
                 channel_id = int(event_cap.get("channelID"))
