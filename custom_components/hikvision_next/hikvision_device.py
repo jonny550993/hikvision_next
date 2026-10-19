@@ -16,6 +16,7 @@ from .const import (
     ALARM_SERVER_PATH,
     BEHAVIOR_RULES_COORDINATOR,
     CONF_ALARM_SERVER_HOST,
+    CONF_CONNECTION_SDK,
     CONF_SET_ALARM_SERVER,
     DEVICE_LEVEL_EVENT_IDS,
     DOMAIN,
@@ -26,6 +27,7 @@ from .const import (
     resolve_connection_type,
 )
 from .coordinator import BehaviorRulesCoordinator, EventsCoordinator, SecondaryCoordinator
+from .door_control import DoorControlAction
 from .isapi import (
     BehaviorRuleInfo,
     EventInfo,
@@ -35,6 +37,7 @@ from .isapi import (
     ISAPIUnauthorizedError,
 )
 from .isapi.const import EVENT_IO
+from .sdk.acs_door import door_index_from_event_url, sdk_remote_control_door
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -177,6 +180,22 @@ class HikvisionDevice(ISAPIClient):
                 )
             events.append(event)
         return events
+
+    async def remote_control_door(self, event: EventInfo, action: DoorControlAction) -> None:
+        """Control a door using the configured SDK connection when available, else ISAPI."""
+        sdk_user = getattr(self, "sdk_user", None)
+        sdk_subscription = getattr(self, "sdk_subscription", None)
+        if self.connection_type == CONF_CONNECTION_SDK and sdk_user is not None and sdk_subscription:
+            sdk = getattr(sdk_subscription, "sdk", sdk_subscription)
+            await self.hass.async_add_executor_job(
+                sdk_remote_control_door,
+                sdk,
+                sdk_user,
+                door_index_from_event_url(event.url),
+                action,
+            )
+            return
+        await super().remote_control_door(event, action)
 
     def handle_exception(self, ex: Exception, details: str = ""):
         """Handle common exceptions."""
