@@ -72,7 +72,7 @@ async def test_ipc_intrusion_detection_alert(
     assert sensor.state == STATE_OFF
 
     view = EventNotificationsView(hass)
-    mock_request = mock_event_notification("ipc_yard_fielddetection")
+    mock_request = mock_event_notification("ipc_1_fielddetection")
     response = await view.post(mock_request)
 
     assert response.status == HTTPStatus.OK
