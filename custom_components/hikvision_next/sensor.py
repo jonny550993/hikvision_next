@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
-
 from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
@@ -129,7 +128,7 @@ class FacePersonSensor(SensorEntity):
         self._attr_device_info = device.hass_device_info(camera_id)
         self._attr_name = "Recognized person"
         self._attr_extra_state_attributes = {}
-        self._face_reset_task: asyncio.Task | None = None
+        self._face_reset_unsub = None
 
     async def async_added_to_hass(self) -> None:
         """Register this entity for event notifications."""
@@ -153,26 +152,20 @@ class FacePersonSensor(SensorEntity):
         if self.hass and self.entity_id:
             self.async_write_ha_state()
         if self.hass:
-            self._face_reset_task = self.hass.async_create_task(self._reset_after_pulse())
+            self._face_reset_unsub = async_call_later(
+                self.hass, FACE_PERSON_PULSE_SECONDS, self._reset_after_pulse
+            )
 
-    async def _reset_after_pulse(self) -> None:
+    def _reset_after_pulse(self, _now) -> None:
         """Clear personal data after the short recognition pulse."""
-        task = asyncio.current_task()
-        try:
-            await asyncio.sleep(FACE_PERSON_PULSE_SECONDS)
-            self._attr_native_value = "unknown"
-            self._attr_extra_state_attributes = {}
-            if self.hass and self.entity_id:
-                self.async_write_ha_state()
-        except asyncio.CancelledError:
-            raise
-        finally:
-            # A newer recognition event may already have scheduled another reset.
-            if self._face_reset_task is task:
-                self._face_reset_task = None
+        self._face_reset_unsub = None
+        self._attr_native_value = "unknown"
+        self._attr_extra_state_attributes = {}
+        if self.hass and self.entity_id:
+            self.async_write_ha_state()
 
     def _cancel_face_reset(self) -> None:
-        """Cancel a pending face reset task."""
-        if self._face_reset_task and not self._face_reset_task.done():
-            self._face_reset_task.cancel()
-        self._face_reset_task = None
+        """Cancel a pending face reset callback."""
+        if self._face_reset_unsub:
+            self._face_reset_unsub()
+            self._face_reset_unsub = None
