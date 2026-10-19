@@ -1,5 +1,7 @@
 {
   "name": "Hikvision NVR / IP Camera",
   "render_readme": true,
-  "homeassistant": "2026.8"
+  "homeassistant": "2026.8",
+  "zip_release": true,
+  "filename": "hikvision_next.zip"
 }
