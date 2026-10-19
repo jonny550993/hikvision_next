@@ -49,6 +49,8 @@ class EventInfo:
     is_proxy: bool = False  # True if the event comes from device connected via NVR
     disabled: bool = False
     notifications: list[str] = field(default_factory=list)
+    anpr_plate_unique_id: str | None = None
+    anpr_image_unique_id: str | None = None
 
 
 @dataclass
