@@ -22,17 +22,19 @@ jobs:
           zip -r "$GITHUB_WORKSPACE/hikvision_next.zip" .
           cd "$GITHUB_WORKSPACE"
           sha256sum hikvision_next.zip > hikvision_next.zip.sha256
-      - name: Upload ZIP and checksum to release
+      - name: Create versioned release if needed, then upload ZIP
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
           else
-            TAG="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // empty')"
+            VERSION="$(python -c 'import json; print(json.load(open("custom_components/hikvision_next/manifest.json"))["version"])')"
+            TAG="v$VERSION"
           fi
-          if [ -z "$TAG" ]; then
-            echo "No published release exists. Publish a release, then run this workflow again."
-            exit 1
+
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "$TAG" --generate-notes
           fi
+
           gh release upload "$TAG" hikvision_next.zip hikvision_next.zip.sha256 --clobber
