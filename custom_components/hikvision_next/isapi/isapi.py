@@ -1028,7 +1028,7 @@ class ISAPIClient:
 class ISAPISetEventStateMutexError(Exception):
     """Error setting event mutex."""
 
-    def __init__(self, event: EventInfo, mutex_issues: []) -> None:
+    def __init__(self, event: EventInfo, mutex_issues: list[MutexIssue]) -> None:
         """Initialize exception."""
         self.event = event
         self.mutex_issues = mutex_issues

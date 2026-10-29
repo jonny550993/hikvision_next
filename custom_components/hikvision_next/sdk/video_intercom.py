@@ -283,7 +283,7 @@ class VideoIntercomRemoteConfig:
         self._on_event = on_event
         self._on_status_change = on_status_change
         self._handle: int | None = None
-        self._callback: fRemoteConfigCallback | None = None
+        self._callback: Callable[..., None] | None = None
         self._last_call: NET_DVR_VIDEO_CALL_PARAM | None = None
 
     @property
