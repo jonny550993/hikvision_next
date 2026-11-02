@@ -104,7 +104,14 @@ class EventNotificationsView(HomeAssistantView):
                     url = item.runtime_data.host
                     instance_identifiers.append(url)
 
-                    if await asyncio.to_thread(self.get_ip, urlparse(url).hostname) == device_ip:
+                    try:
+                        resolved_ip = await asyncio.wait_for(
+                            asyncio.to_thread(self.get_ip, urlparse(url).hostname),
+                            timeout=1,
+                        )
+                    except (OSError, asyncio.TimeoutError):
+                        continue
+                    if resolved_ip == device_ip:
                         entry = item
                         break
 
@@ -113,8 +120,11 @@ class EventNotificationsView(HomeAssistantView):
             if entry and device_ip:
                 configured_host = urlparse(entry.runtime_data.host).hostname
                 try:
-                    expected_ip = await asyncio.to_thread(self.get_ip, configured_host)
-                except OSError:
+                    expected_ip = await asyncio.wait_for(
+                        asyncio.to_thread(self.get_ip, configured_host),
+                        timeout=1,
+                    )
+                except (OSError, asyncio.TimeoutError):
                     # Some installations use private DNS names that are only
                     # resolvable by the camera/NVR network. Keep MAC selection
                     # as a fallback for those explicitly identified devices.
