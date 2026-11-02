@@ -25,7 +25,12 @@ from custom_components.hikvision_next.sdk.hcnetsdk import (
 def test_door_index_from_event_url():
     assert door_index_from_event_url("AccessControl/RemoteControl/door/1") == 1
     assert door_index_from_event_url("AccessControl/RemoteControl/door/3") == 3
-    assert door_index_from_event_url(None) == 1
+    with pytest.raises(ValueError, match="Missing access-control door URL"):
+        door_index_from_event_url(None)
+    with pytest.raises(ValueError, match="Invalid access-control door URL"):
+        door_index_from_event_url("AccessControl/RemoteControl/door/0")
+    with pytest.raises(ValueError, match="Invalid access-control door URL"):
+        door_index_from_event_url("AccessControl/RemoteControl/door/not-a-number")
 
 
 def test_sdk_remote_control_door_sends_close_for_lock():
