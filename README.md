@@ -164,3 +164,8 @@ Download logs from `Settings / System / Logs`
 - DS-2SE4C425MWG-E/26
 - DS-2TD1228-2/QA
 - DS-2TD2628-3/QA
+
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
