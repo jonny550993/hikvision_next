@@ -109,7 +109,7 @@ class EventNotificationsView(HomeAssistantView):
                             asyncio.to_thread(self.get_ip, urlparse(url).hostname),
                             timeout=1,
                         )
-                    except (OSError, asyncio.TimeoutError):
+                    except Exception:  # noqa: BLE001 - DNS failures are expected for private-only hostnames
                         continue
                     if resolved_ip == device_ip:
                         entry = item
@@ -124,7 +124,7 @@ class EventNotificationsView(HomeAssistantView):
                         asyncio.to_thread(self.get_ip, configured_host),
                         timeout=1,
                     )
-                except (OSError, asyncio.TimeoutError):
+                except Exception:  # noqa: BLE001 - DNS failures are expected for private-only hostnames
                     # Some installations use private DNS names that are only
                     # resolvable by the camera/NVR network. Keep MAC selection
                     # as a fallback for those explicitly identified devices.
