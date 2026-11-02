@@ -953,10 +953,12 @@ class ISAPIClient:
         if response.status_code == 401:
             www_authenticate = response.headers.get("WWW-Authenticate", "")
             _LOGGER.debug("WWW-Authenticate header: %s", www_authenticate)
-            if "Basic" in www_authenticate:
-                self._auth_method = httpx.BasicAuth(self.username, self.password)
-            elif "Digest" in www_authenticate:
+            # Prefer challenge-response authentication when a device offers
+            # both schemes; Basic sends reusable credentials on every request.
+            if "Digest" in www_authenticate:
                 self._auth_method = httpx.DigestAuth(self.username, self.password)
+            elif "Basic" in www_authenticate:
+                self._auth_method = httpx.BasicAuth(self.username, self.password)
 
         if not self._auth_method:
             _LOGGER.error("Authentication method not detected, %s", response.status_code)
