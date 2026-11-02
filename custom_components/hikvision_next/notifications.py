@@ -155,15 +155,7 @@ class EventNotificationsView(HomeAssistantView):
                 part_content_type = headers.get(CONTENT_TYPE.lower(), "").split(";", 1)[0].strip().lower()
                 if part_content_type in xml_media_types:
                     xml = part.text
-                if part_content_type == CONTENT_TYPE_IMAGE:
-                    # Use camera.snapshot service instead
-                    # from datetime import datetime
-                    # import aiofiles
-                    # now = datetime.now()
-                    # filename = f"/media/{DOMAIN}/snapshots/{now.strftime('%Y-%m-%d_%H-%M-%S_%f')}.jpg"
-                    # async with aiofiles.open(filename, "wb") as image_file:
-                    #     await image_file.write(part.content)
-                    #     await image_file.flush()
+
 
         elif media_type not in xml_media_types:
             raise ValueError(f"Unsupported event Content-Type {content_type_header}")
