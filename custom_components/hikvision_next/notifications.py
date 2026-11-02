@@ -129,7 +129,7 @@ class EventNotificationsView(HomeAssistantView):
         """Extract XML content from multipart request or from simple request."""
 
         content_length = request.content_length
-        if content_length is not None and content_length > MAX_EVENT_BODY_BYTES:
+        if isinstance(content_length, int) and content_length > MAX_EVENT_BODY_BYTES:
             raise ValueError("Event notification body is too large")
         data = await request.read()
         if len(data) > MAX_EVENT_BODY_BYTES:
