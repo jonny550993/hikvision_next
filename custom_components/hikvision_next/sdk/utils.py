@@ -162,7 +162,7 @@ def call_ISAPI(sdk: CDLL, user_id: int, http_method: str, url: str, requestBody:
     # e.g.: `GET /ISAPI/System/IO/outputs`
     inUrl = f"{http_method} {url}"
 
-    logger.debug("Call ISAPI request method url body: {} {} {} ", http_method, url, requestBody)
+    logger.debug("Calling device ISAPI endpoint: %s %s", http_method, url)
 
     # Input information
     inputStruct = NET_DVR_XML_CONFIG_INPUT()
@@ -171,7 +171,7 @@ def call_ISAPI(sdk: CDLL, user_id: int, http_method: str, url: str, requestBody:
     inputStruct.lpRequestUrl = cast(c_char_p(requestUrlBuffer), c_void_p)
     inputStruct.dwRequestUrlLen = len(requestUrlBuffer)
 
-    inputBuffer = bytes(requestBody, "ascii")
+    inputBuffer = requestBody.encode("utf-8")
 
     inputStruct.lpInBuffer = cast(c_char_p(inputBuffer), c_void_p)
     inputStruct.dwInBufferSize = len(inputBuffer)
@@ -205,8 +205,6 @@ def call_ISAPI(sdk: CDLL, user_id: int, http_method: str, url: str, requestBody:
         response_body = bytearray()
     else:
         response_body = bytearray(string_at(outputStruct.lpOutBuffer, size))
-
-    logger.debug("Response output: {}", response_body.decode("utf-8", errors="replace"))
 
     return response_body
 
