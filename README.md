@@ -65,7 +65,7 @@ The scope supported features depends on device model, setup and firmware version
 
 ### Manual
 
-1. copy `custom_components/hikvision_next` folder into `conifg/custom_components`
+1. copy `custom_components/hikvision_next` folder into `config/custom_components`
 2. restart Home Assistant
 3. on `Settings / Devices & Services` page press `+ Add Integration`
 4. search for `Hikvision NVR / IP Camera` and add your Hikvision device using config dialog, repeat the last 2 steps for more devices
