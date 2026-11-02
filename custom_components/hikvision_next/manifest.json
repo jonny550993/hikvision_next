@@ -5,6 +5,11 @@
     "http",
     "network"
   ],
+  "categories": [
+    "security_safety.cameras",
+    "security_safety.doorbells_intercoms",
+    "security_safety.locks_access"
+  ],
   "codeowners": [
     "@maciej-or"
   ],

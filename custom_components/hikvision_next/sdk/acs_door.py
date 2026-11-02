@@ -30,9 +30,11 @@ _SDK_GATEWAY_COMMAND: dict[DoorControlAction, GatewayCommand] = {
 def door_index_from_event_url(url: str | None) -> int:
     """Parse 1-based door index from an ISAPI RemoteControl door URL."""
     if not url:
-        return 1
+        raise ValueError("Missing access-control door URL")
     match = _DOOR_URL_RE.search(url)
-    return int(match.group(1)) if match else 1
+    if not match or int(match.group(1)) < 1:
+        raise ValueError(f"Invalid access-control door URL: {url}")
+    return int(match.group(1))
 
 
 def sdk_remote_control_door(

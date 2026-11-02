@@ -1,4 +1,4 @@
-"""Diagnostics support for Wiser."""
+"""Diagnostics support for Hikvision devices."""
 
 from __future__ import annotations
 
@@ -125,7 +125,9 @@ async def get_isapi_data(isapi, endpoint: str) -> dict:
     except (HTTPStatusError, ISAPIUnauthorizedError, ISAPIForbiddenError) as ex:
         entry["status_code"] = ex.response.status_code
     except Exception as ex:  # noqa: BLE001
-        entry["error"] = ex
+        # Exception messages can contain request URLs or device-specific details.
+        # Keep diagnostics useful without exporting potentially sensitive data.
+        entry["error"] = type(ex).__name__
     return entry
 
 
@@ -141,7 +143,7 @@ def anonymise_data(data):
     if isinstance(data, dict):
         result = {}
         for key, value in data.items():
-            if key in ANON_KEYS and value is not None:
+            if key in ANON_KEYS and isinstance(value, str):
                 if value in anon_map:
                     result[key] = anon_map[value]
                 else:

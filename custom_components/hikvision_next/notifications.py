@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from http import HTTPStatus
+import asyncio
 import ipaddress
 import logging
 import socket
@@ -27,6 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 CONTENT_TYPE = "Content-Type"
 CONTENT_TYPE_TEXT_HTML = "text/html"
 CONTENT_TYPE_IMAGE = "image/jpeg"
+MAX_EVENT_BODY_BYTES = 10 * 1024 * 1024
 
 
 class EventNotificationsView(HomeAssistantView):
@@ -44,12 +46,10 @@ class EventNotificationsView(HomeAssistantView):
         """Accept the POST request from NVR or IP Camera."""
 
         try:
-            _LOGGER.debug("--- Incoming event notification ---")
-            _LOGGER.debug("Source: %s", request.remote)
+            _LOGGER.debug("Incoming Hikvision event notification from %s", request.remote)
             xml = await self.parse_event_request(request)
-            _LOGGER.debug("alert info: %s", xml)
             alert = ISAPIClient.parse_event_notification(xml)
-            self.device = self.get_isapi_device(request.remote, alert)
+            self.device = await self.async_get_isapi_device(request.remote, alert)
             self.update_alert_channel(alert)
             self.trigger_sensor(alert)
         except Exception as ex:  # pylint: disable=broad-except
@@ -58,13 +58,30 @@ class EventNotificationsView(HomeAssistantView):
         response = web.Response(status=HTTPStatus.OK, content_type=CONTENT_TYPE_TEXT_PLAIN)
         return response
 
-    def get_isapi_device(self, device_ip, alert: AlertInfo) -> HikvisionDevice:
-        """Get integration instance for device sending alert."""
+    async def async_get_isapi_device(self, device_ip, alert: AlertInfo) -> HikvisionDevice:
+        """Get integration instance for device sending alert.
+
+        With a single configured device, still verify the network source. The
+        webhook is unauthenticated because Hikvision devices cannot attach a
+        Home Assistant bearer token.
+        """
         integration_entries = self.hass.config_entries.async_entries(DOMAIN)
+        integration_entries = [item for item in integration_entries if not item.disabled_by]
         instance_identifiers = []
         entry = None
         if len(integration_entries) == 1:
             entry = integration_entries[0]
+            configured_host = urlparse(entry.runtime_data.host).hostname
+            if not configured_host or not device_ip:
+                raise ValueError("Cannot verify event notification source")
+            try:
+                expected_ip = await asyncio.to_thread(self.get_ip, configured_host)
+                remote_ip = str(ipaddress.ip_address(device_ip))
+                expected_ip = str(ipaddress.ip_address(expected_ip))
+            except (ValueError, OSError) as ex:
+                raise ValueError("Cannot verify event notification source") from ex
+            if remote_ip != expected_ip:
+                raise ValueError("Event notification source does not match configured device")
         else:
             # Search device by mac_address
             for item in integration_entries:
@@ -87,9 +104,35 @@ class EventNotificationsView(HomeAssistantView):
                     url = item.runtime_data.host
                     instance_identifiers.append(url)
 
-                    if self.get_ip(urlparse(url).hostname) == device_ip:
+                    try:
+                        resolved_ip = await asyncio.wait_for(
+                            asyncio.to_thread(self.get_ip, urlparse(url).hostname),
+                            timeout=1,
+                        )
+                    except Exception:  # noqa: BLE001 - DNS failures are expected for private-only hostnames
+                        continue
+                    if resolved_ip == device_ip:
                         entry = item
                         break
+
+            # A matching MAC is useful for selecting between devices, but it
+            # must not override a contradictory source IP when DNS is available.
+            if entry and device_ip:
+                configured_host = urlparse(entry.runtime_data.host).hostname
+                try:
+                    expected_ip = await asyncio.wait_for(
+                        asyncio.to_thread(self.get_ip, configured_host),
+                        timeout=1,
+                    )
+                except Exception:  # noqa: BLE001 - DNS failures are expected for private-only hostnames
+                    # Some installations use private DNS names that are only
+                    # resolvable by the camera/NVR network. Keep MAC selection
+                    # as a fallback for those explicitly identified devices.
+                    if entry.runtime_data.device_info.mac_address != alert.mac:
+                        raise ValueError("Cannot verify event notification source")
+                else:
+                    if str(ipaddress.ip_address(expected_ip)) != str(ipaddress.ip_address(device_ip)):
+                        raise ValueError("Event notification source does not match configured device")
 
         if not entry:
             raise ValueError(f"Cannot find ISAPI instance for device {device_ip} in {instance_identifiers}")
@@ -111,13 +154,20 @@ class EventNotificationsView(HomeAssistantView):
     async def parse_event_request(self, request: web.Request) -> str:
         """Extract XML content from multipart request or from simple request."""
 
-        data = await request.read()
+        content_length = request.content_length
+        if isinstance(content_length, int) and content_length > MAX_EVENT_BODY_BYTES:
+            raise ValueError("Event notification body is too large")
+        if isinstance(request, web.Request):
+            data = await request.content.read(MAX_EVENT_BODY_BYTES + 1)
+        else:
+            data = await request.read()
+        if len(data) > MAX_EVENT_BODY_BYTES:
+            raise ValueError("Event notification body is too large")
 
         content_type_header = request.headers.get(CONTENT_TYPE, "").strip()
         if not content_type_header:
             raise ValueError("Missing event Content-Type header")
 
-        _LOGGER.debug("request headers: %s", request.headers)
         xml = None
         media_type = content_type_header.split(";", 1)[0].strip().lower()
         xml_media_types = {"application/xml", "text/xml"}
@@ -131,20 +181,10 @@ class EventNotificationsView(HomeAssistantView):
                 for key, value in part.headers.items():
                     assert isinstance(key, bytes)
                     headers[key.decode("ascii").lower()] = value.decode("ascii")
-                _LOGGER.debug("part headers: %s", headers)
                 part_content_type = headers.get(CONTENT_TYPE.lower(), "").split(";", 1)[0].strip().lower()
                 if part_content_type in xml_media_types:
                     xml = part.text
-                if part_content_type == CONTENT_TYPE_IMAGE:
-                    _LOGGER.debug("image found")
-                    # Use camera.snapshot service instead
-                    # from datetime import datetime
-                    # import aiofiles
-                    # now = datetime.now()
-                    # filename = f"/media/{DOMAIN}/snapshots/{now.strftime('%Y-%m-%d_%H-%M-%S_%f')}.jpg"
-                    # async with aiofiles.open(filename, "wb") as image_file:
-                    #     await image_file.write(part.content)
-                    #     await image_file.flush()
+
 
         elif media_type not in xml_media_types:
             raise ValueError(f"Unsupported event Content-Type {content_type_header}")
@@ -181,13 +221,20 @@ class EventNotificationsView(HomeAssistantView):
         if alert.event_id not in {"face"}:
             return None, None
         sensors = self.hass.data.get(DOMAIN, {}).get("event_text_sensors", {})
+        device_serial = self.device.device_info.serial_no
+        device_sensors = {
+            uid: entity
+            for uid, entity in sensors.items()
+            if getattr(getattr(entity, "device", None), "device_info", None)
+            and entity.device.device_info.serial_no == device_serial
+        }
         candidates = [
             (uid, entity)
-            for uid, entity in sensors.items()
+            for uid, entity in device_sensors.items()
             if getattr(entity, "camera_id", 0) == alert.channel_id
         ]
-        if not candidates and (alert.channel_id == 0 or len(sensors) == 1):
-            candidates = list(sensors.items())
+        if not candidates and (alert.channel_id == 0 or len(device_sensors) == 1):
+            candidates = list(device_sensors.items())
         if not candidates:
             return None, None
         uid, entity = candidates[0]
@@ -195,8 +242,6 @@ class EventNotificationsView(HomeAssistantView):
 
     def trigger_sensor(self, alert: AlertInfo) -> None:
         """Update text sensors or determine entity and set binary sensor state."""
-
-        _LOGGER.debug("Alert: %s", alert)
 
         if alert.event_id == "lock":
             unique_id = self._event_platform_unique_id(alert).removeprefix("lock.")
