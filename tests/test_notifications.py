@@ -3,7 +3,7 @@
 import pytest
 from http import HTTPStatus
 from homeassistant.core import HomeAssistant, Event
-from custom_components.hikvision_next.notifications import EventNotificationsView
+from custom_components.hikvision_next.notifications import EventNotificationsView, MAX_EVENT_BODY_BYTES
 from custom_components.hikvision_next.const import HIKVISION_EVENT, RTSP_PORT_FORCED
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from unittest.mock import MagicMock
@@ -260,6 +260,35 @@ async def test_parse_event_request_accepts_xml_content_type_parameters(
     request.read = read_payload
 
     assert await view.parse_event_request(request) == "<EventNotificationAlert/>"
+
+
+@pytest.mark.parametrize("init_integration", ["DS-2CD2386G2-IU"], indirect=True)
+async def test_single_device_rejects_notification_from_unconfigured_source(
+    hass: HomeAssistant, init_integration: MockConfigEntry,
+) -> None:
+    """Do not trust an unauthenticated event POST from an arbitrary host."""
+    entity_id = "binary_sensor.yard_intrusion"
+    assert hass.states.get(entity_id).state == STATE_OFF
+
+    request = mock_event_notification("ipc_1_fielddetection")
+    request.remote = "192.0.2.44"
+    await EventNotificationsView(hass).post(request)
+
+    assert hass.states.get(entity_id).state == STATE_OFF
+
+
+async def test_parse_event_request_rejects_oversized_content_length(
+    hass: HomeAssistant,
+) -> None:
+    """Reject oversized event bodies before reading them."""
+    view = EventNotificationsView(hass)
+    request = MagicMock()
+    request.headers = {"Content-Type": "application/xml"}
+    request.content_length = MAX_EVENT_BODY_BYTES + 1
+
+    with pytest.raises(ValueError, match="body is too large"):
+        await view.parse_event_request(request)
+    request.read.assert_not_called()
 
 
 async def test_parse_event_request_rejects_missing_content_type(
