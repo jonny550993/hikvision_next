@@ -104,9 +104,25 @@ class EventNotificationsView(HomeAssistantView):
                     url = item.runtime_data.host
                     instance_identifiers.append(url)
 
-                    if self.get_ip(urlparse(url).hostname) == device_ip:
+                    if await asyncio.to_thread(self.get_ip, urlparse(url).hostname) == device_ip:
                         entry = item
                         break
+
+            # A matching MAC is useful for selecting between devices, but it
+            # must not override a contradictory source IP when DNS is available.
+            if entry and device_ip:
+                configured_host = urlparse(entry.runtime_data.host).hostname
+                try:
+                    expected_ip = await asyncio.to_thread(self.get_ip, configured_host)
+                except OSError:
+                    # Some installations use private DNS names that are only
+                    # resolvable by the camera/NVR network. Keep MAC selection
+                    # as a fallback for those explicitly identified devices.
+                    if entry.runtime_data.device_info.mac_address != alert.mac:
+                        raise ValueError("Cannot verify event notification source")
+                else:
+                    if str(ipaddress.ip_address(expected_ip)) != str(ipaddress.ip_address(device_ip)):
+                        raise ValueError("Event notification source does not match configured device")
 
         if not entry:
             raise ValueError(f"Cannot find ISAPI instance for device {device_ip} in {instance_identifiers}")
@@ -131,7 +147,10 @@ class EventNotificationsView(HomeAssistantView):
         content_length = request.content_length
         if isinstance(content_length, int) and content_length > MAX_EVENT_BODY_BYTES:
             raise ValueError("Event notification body is too large")
-        data = await request.read()
+        if isinstance(request, web.Request):
+            data = await request.content.read(MAX_EVENT_BODY_BYTES + 1)
+        else:
+            data = await request.read()
         if len(data) > MAX_EVENT_BODY_BYTES:
             raise ValueError("Event notification body is too large")
 
