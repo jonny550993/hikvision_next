@@ -989,10 +989,9 @@ class ISAPIClient:
             )
             response.raise_for_status()
             result = parse_isapi_response(response, present)
-            _LOGGER.debug("--- [%s] %s", method, full_url)
-            if data:
-                _LOGGER.debug(">>> payload:\n%s", data)
-            _LOGGER.debug("\n%s", result)
+            # Do not log request bodies or parsed responses: ISAPI payloads can
+            # contain credentials, face/card identifiers, and ANPR plate data.
+            _LOGGER.debug("ISAPI request succeeded [%s] %s", method, url)
         except HTTPStatusError as ex:
             _LOGGER.info("--- [%s] %s\n%s", method, full_url, ex)
             if ex.response.status_code == HTTPStatus.UNAUTHORIZED:
