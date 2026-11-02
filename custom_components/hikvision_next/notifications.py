@@ -192,13 +192,20 @@ class EventNotificationsView(HomeAssistantView):
         if alert.event_id not in {"face"}:
             return None, None
         sensors = self.hass.data.get(DOMAIN, {}).get("event_text_sensors", {})
+        device_serial = self.device.device_info.serial_no
+        device_sensors = {
+            uid: entity
+            for uid, entity in sensors.items()
+            if getattr(getattr(entity, "device", None), "device_info", None)
+            and entity.device.device_info.serial_no == device_serial
+        }
         candidates = [
             (uid, entity)
-            for uid, entity in sensors.items()
+            for uid, entity in device_sensors.items()
             if getattr(entity, "camera_id", 0) == alert.channel_id
         ]
-        if not candidates and (alert.channel_id == 0 or len(sensors) == 1):
-            candidates = list(sensors.items())
+        if not candidates and (alert.channel_id == 0 or len(device_sensors) == 1):
+            candidates = list(device_sensors.items())
         if not candidates:
             return None, None
         uid, entity = candidates[0]
@@ -206,8 +213,6 @@ class EventNotificationsView(HomeAssistantView):
 
     def trigger_sensor(self, alert: AlertInfo) -> None:
         """Update text sensors or determine entity and set binary sensor state."""
-
-        _LOGGER.debug("Alert: %s", alert)
 
         if alert.event_id == "lock":
             unique_id = self._event_platform_unique_id(alert).removeprefix("lock.")
