@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from http import HTTPStatus
+import asyncio
 import ipaddress
 import logging
 import socket
@@ -27,6 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 CONTENT_TYPE = "Content-Type"
 CONTENT_TYPE_TEXT_HTML = "text/html"
 CONTENT_TYPE_IMAGE = "image/jpeg"
+MAX_EVENT_BODY_BYTES = 10 * 1024 * 1024
 
 
 class EventNotificationsView(HomeAssistantView):
@@ -44,12 +46,10 @@ class EventNotificationsView(HomeAssistantView):
         """Accept the POST request from NVR or IP Camera."""
 
         try:
-            _LOGGER.debug("--- Incoming event notification ---")
-            _LOGGER.debug("Source: %s", request.remote)
+            _LOGGER.debug("Incoming Hikvision event notification from %s", request.remote)
             xml = await self.parse_event_request(request)
-            _LOGGER.debug("alert info: %s", xml)
             alert = ISAPIClient.parse_event_notification(xml)
-            self.device = self.get_isapi_device(request.remote, alert)
+            self.device = await self.async_get_isapi_device(request.remote, alert)
             self.update_alert_channel(alert)
             self.trigger_sensor(alert)
         except Exception as ex:  # pylint: disable=broad-except
@@ -58,13 +58,30 @@ class EventNotificationsView(HomeAssistantView):
         response = web.Response(status=HTTPStatus.OK, content_type=CONTENT_TYPE_TEXT_PLAIN)
         return response
 
-    def get_isapi_device(self, device_ip, alert: AlertInfo) -> HikvisionDevice:
-        """Get integration instance for device sending alert."""
+    async def async_get_isapi_device(self, device_ip, alert: AlertInfo) -> HikvisionDevice:
+        """Get integration instance for device sending alert.
+
+        With a single configured device, still verify the network source. The
+        webhook is unauthenticated because Hikvision devices cannot attach a
+        Home Assistant bearer token.
+        """
         integration_entries = self.hass.config_entries.async_entries(DOMAIN)
+        integration_entries = [item for item in integration_entries if not item.disabled_by]
         instance_identifiers = []
         entry = None
         if len(integration_entries) == 1:
             entry = integration_entries[0]
+            configured_host = urlparse(entry.runtime_data.host).hostname
+            if not configured_host or not device_ip:
+                raise ValueError("Cannot verify event notification source")
+            try:
+                expected_ip = await asyncio.to_thread(self.get_ip, configured_host)
+                remote_ip = str(ipaddress.ip_address(device_ip))
+                expected_ip = str(ipaddress.ip_address(expected_ip))
+            except (ValueError, OSError) as ex:
+                raise ValueError("Cannot verify event notification source") from ex
+            if remote_ip != expected_ip:
+                raise ValueError("Event notification source does not match configured device")
         else:
             # Search device by mac_address
             for item in integration_entries:
@@ -111,13 +128,17 @@ class EventNotificationsView(HomeAssistantView):
     async def parse_event_request(self, request: web.Request) -> str:
         """Extract XML content from multipart request or from simple request."""
 
+        content_length = request.content_length
+        if content_length is not None and content_length > MAX_EVENT_BODY_BYTES:
+            raise ValueError("Event notification body is too large")
         data = await request.read()
+        if len(data) > MAX_EVENT_BODY_BYTES:
+            raise ValueError("Event notification body is too large")
 
         content_type_header = request.headers.get(CONTENT_TYPE, "").strip()
         if not content_type_header:
             raise ValueError("Missing event Content-Type header")
 
-        _LOGGER.debug("request headers: %s", request.headers)
         xml = None
         media_type = content_type_header.split(";", 1)[0].strip().lower()
         xml_media_types = {"application/xml", "text/xml"}
@@ -131,12 +152,10 @@ class EventNotificationsView(HomeAssistantView):
                 for key, value in part.headers.items():
                     assert isinstance(key, bytes)
                     headers[key.decode("ascii").lower()] = value.decode("ascii")
-                _LOGGER.debug("part headers: %s", headers)
                 part_content_type = headers.get(CONTENT_TYPE.lower(), "").split(";", 1)[0].strip().lower()
                 if part_content_type in xml_media_types:
                     xml = part.text
                 if part_content_type == CONTENT_TYPE_IMAGE:
-                    _LOGGER.debug("image found")
                     # Use camera.snapshot service instead
                     # from datetime import datetime
                     # import aiofiles
